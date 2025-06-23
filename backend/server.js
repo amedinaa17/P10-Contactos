@@ -1,10 +1,27 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const app = express();
 const port = 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Serve the PWA (manifest and service worker)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+// Ruta para el archivo manifest.json
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, '..','public', 'manifest.json'));
+});
+
+// Ruta para el archivo service-worker.js
+app.get('/sw.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
+});
 
 let contactos = [
     { id: 1, nombre: 'Ana Medina', telefono: '55 1234 5678' },
