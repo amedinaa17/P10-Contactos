@@ -9,10 +9,10 @@ services:
     networks:
       - mynetwork
 
-  frontend:
+  public:
     build:
       context: .
-      dockerfile: frontend/Dockerfile  # Dockerfile para el frontend
+      dockerfile: public/Dockerfile  # Dockerfile para el frontend
     ports:
       - "80:80"
     networks:

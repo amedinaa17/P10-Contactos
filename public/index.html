@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Contactos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="manifest" href="./sw.js" />
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                console.log('Service Worker registrado con éxito:', registration);
+                })
+                .catch(error => {
+                console.log('Error al registrar el Service Worker:', error);
+                });
+            });
+        }
+    </script>
+
+    
+    <script> 
+        const apiUrl = "http://34.27.172.88:3001/api/contactos";
+
+        let contactoAEliminarId = null;
+
+        // Función para obtener todos los contactos (GET)
+        function getContactos() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('contactos-container');
+                    container.innerHTML = '';
+                    data.forEach(contacto => {
+                        const contactoRow = document.createElement('tr');
+                        contactoRow.innerHTML = `
+                            <td>${contacto.nombre}</td>
+                            <td>${contacto.telefono}</td>
+                            <td class="text-center">
+                                <button class="btn btn-primary" style="background-color: #36C9C6; border-color: #36C9C6;" onclick="editarContacto(${contacto.id}, '${contacto.nombre}', '${contacto.telefono}')"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-danger" style="background-color: #ED6A5A; border-color: #ED6A5A;" onclick="confirmarEliminarContacto(${contacto.id})"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        `;
+                        container.appendChild(contactoRow);
+                    });
+                });
+        }
+
+        // Función para confirmar la eliminación de un contacto
+        function confirmarEliminarContacto(id) {
+            contactoAEliminarId = id;
+            const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionEliminar'));
+            modal.show();
+        }
+
+        // Función para eliminar un contacto por ID (DELETE)
+        function deleteContacto() {
+            fetch(`${apiUrl}/${contactoAEliminarId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEliminar'));
+                    modal.hide();
+                    getContactos();
+                    showModalExito('Contacto eliminado con éxito');
+                })
+                .catch(error => {
+                    console.error("Error al eliminar el contacto:", error);
+                    showModalError("Error al eliminar el contacto");
+                });
+        }
+
+        // Función para agregar un nuevo contacto (POST)
+        function addContacto() {
+            const nombre = document.getElementById("nombre").value;
+            const telefono = document.getElementById("telefono").value;
+
+            if (!nombre || !telefono) {
+                alert("Por favor ingrese todos los datos.");
+                return;
+            }
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nombre: nombre, telefono: telefono })
+            })
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById("nombre").value = '';
+                    document.getElementById("telefono").value = '';
+                    getContactos();
+                    showModalExito('Contacto agregado con éxito');
+                })
+                .catch(error => {
+                    console.error("Error al agregar el contacto:", error);
+                    showModalError("Error al agregar el contacto");
+                });
+        }
+
+        // Función para editar un contacto
+        function editarContacto(id, nombre, telefono) {
+            document.getElementById("editar-nombre").value = nombre;
+            document.getElementById("editar-telefono").value = telefono;
+            document.getElementById("editar-contacto-id").value = id;
+
+            const modal = new bootstrap.Modal(document.getElementById('modalActualizarContacto'));
+            modal.show();
+        }
+
+        // Función para actualizar un contacto (PUT)
+        function actualizarContacto() {
+            const id = document.getElementById("editar-contacto-id").value;
+            const nombre = document.getElementById("editar-nombre").value;
+            const telefono = document.getElementById("editar-telefono").value;
+
+            fetch(`${apiUrl}/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: id, nombre: nombre, telefono: telefono })
+            })
+                .then(response => response.json())
+                .then(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalActualizarContacto'));
+                    modal.hide();
+                    getContactos();
+                    showModalExito('Contacto actualizado con éxito');
+                })
+                .catch(error => {
+                    console.error("Error al actualizar el contacto:", error);
+                    showModalError("Error al actualizar el contacto");
+                });
+        }
+
+        // Función para mostrar el modal de éxito
+        function showModalExito(message) {
+            document.getElementById('modal-exito-body').textContent = message;
+            const modalExito = new bootstrap.Modal(document.getElementById('modalExito'));
+            modalExito.show();
+        }
+
+        // Función para mostrar el modal de error
+        function showModalError(message) {
+            document.getElementById('modal-error-body').textContent = message;
+            const modalError = new bootstrap.Modal(document.getElementById('modalError'));
+            modalError.show();
+        }
+
+        window.onload = getContactos;
+    </script>
+</head>
+
+<body>
+    <div style="background-color: #e0e0e0;">
+        <p style="font-size: smaller; padding: 5px 20px; margin: 0; color: #818181;">Práctica 8 - PWA</p>
+    </div>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid ms-5">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-people-fill" style="color: #6c9bc2; font-size: 30px;"></i>
+                <span style="font-size: larger; font-weight: bold;" class="">Contactos</span>
+            </a>
+        </div>
+    </nav>
+    <div class="container my-4">
+        <div class="row">
+            <!-- Formulario de agregar contacto -->
+            <div class="card col-md-4" style="padding: 20px;">
+                <h3 class="text-center mb-4">Agregar Contacto</h3>
+                <form>
+                    <div class="form-floating mb-3">
+                        <input type="text" id="nombre" class="form-control" placeholder="">
+                        <label for="floatingInput">Nombre</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="number" id="telefono" class="form-control" placeholder="">
+                        <label for="floatingInput">Teléfono</label>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-success mt-2"
+                            style="background-color: #83cb68; border-color: #83cb68;" onclick="addContacto()">Agregar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-1"></div>
+            <!-- Tabla de contactos -->
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <thead style="background-color: #6c9bc2; color: white;">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contactos-container" style="font-size: medium; border-top: #fff;">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación de eliminar -->
+    <div class="modal fade" id="modalConfirmacionEliminar" tabindex="-1" aria-labelledby="modalConfirmacionEliminarLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalConfirmacionEliminarLabel">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas eliminar este contacto?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteContacto()">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de actualización de contacto -->
+    <div class="modal fade" id="modalActualizarContacto" tabindex="-1" aria-labelledby="modalActualizarContactoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalActualizarContactoLabel">Actualizar Contacto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editar-contacto-id">
+                    <div class="mb-3">
+                        <label for="editar-nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="editar-nombre">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editar-telefono" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="editar-telefono">
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-success mt-2"
+                            style="background-color: #eadf52; border-color: #eadf52;"
+                            onclick="actualizarContacto()">Actualizar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de éxito -->
+    <div class="modal fade" id="modalExito" tabindex="-1" aria-labelledby="modalExitoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalExitoLabel">Éxito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal-exito-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success"
+                        style="background-color: #9bc1bc; border-color: #9bc1bc;"
+                        data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de error -->
+    <div class="modal fade" id="modalError" tabindex="-1" aria-labelledby="modalErrorLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalErrorLabel">Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal-error-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger"
+                        style="background-color: #ED6A5A; border-color: #ED6A5A;"
+                        data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
